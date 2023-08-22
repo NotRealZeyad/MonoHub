@@ -1,4 +1,4 @@
-# RBLX-SCRIPTS V1.0.3
+# RBLX-SCRIPTS V1.0.4
 
 Hey Welcome to My Roblox Scripts for hacks to load one of the script use the template down below 
 

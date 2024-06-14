@@ -1,4 +1,4 @@
--- LocalScript for transforming R15 limbs and enabling slither movement
+-- LocalScript in StarterPlayerScripts
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -7,13 +7,7 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 
 -- Function to create the snake limbs
 local function createSnakeLimbs()
-    local limbNames = {
-        "LeftUpperArm", "LeftLowerArm", "LeftHand",
-        "RightUpperArm", "RightLowerArm", "RightHand",
-        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
-        "RightUpperLeg", "RightLowerLeg", "RightFoot"
-    }
-    
+    local limbNames = {"LeftArm", "RightArm", "LeftLeg", "RightLeg"}
     for _, partName in ipairs(limbNames) do
         local limb = character:FindFirstChild(partName)
         if limb then
@@ -33,9 +27,6 @@ local function createSnakeLimbs()
             weld.Part1 = snakeLimb
             weld.C0 = CFrame.new(0, 0, 0)
             weld.Parent = limb
-
-            -- Make the original limb invisible
-            limb.Transparency = 1
         end
     end
 end

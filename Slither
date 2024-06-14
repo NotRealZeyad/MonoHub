@@ -1,6 +1,5 @@
 -- Local Script to make the player look like a worm
 
--- Function to convert the player into a worm
 local function makeWorm(player)
     local character = player.Character or player.CharacterAdded:Wait()
     local humanoid = character:WaitForChild("Humanoid")
@@ -13,29 +12,44 @@ local function makeWorm(player)
         end
     end
 
-    -- Removing unnecessary limbs
-    for _, partName in ipairs({"Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
-        local limb = character:FindFirstChild(partName)
-        if limb then
-            limb:Destroy()
+    -- Aligning body parts to form a worm shape
+    local bodyParts = {}
+    for _, partName in ipairs({"Head", "UpperTorso", "LowerTorso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+        local part = character:FindFirstChild(partName)
+        if part then
+            table.insert(bodyParts, part)
+            part.Massless = true -- Make parts massless for easier alignment
         end
     end
 
-    -- Aligning body parts to form a worm shape
-    local bodyParts = {character.Head, character.UpperTorso, character.LowerTorso}
-    local prevPart = rootPart
+    -- Function to create attachments and alignments between parts
+    local function alignParts(part0, part1)
+        local attachment0 = Instance.new("Attachment", part0)
+        local attachment1 = Instance.new("Attachment", part1)
+        local alignPosition = Instance.new("AlignPosition", part1)
+        alignPosition.Attachment0 = attachment0
+        alignPosition.Attachment1 = attachment1
+        alignPosition.RigidityEnabled = true
+        alignPosition.Responsiveness = 50
+        alignPosition.MaxForce = 5000
+        local alignOrientation = Instance.new("AlignOrientation", part1)
+        alignOrientation.Attachment0 = attachment0
+        alignOrientation.Attachment1 = attachment1
+        alignOrientation.RigidityEnabled = true
+        alignOrientation.Responsiveness = 50
+        alignOrientation.MaxTorque = 5000
+    end
 
-    for i, part in ipairs(bodyParts) do
-        if i > 1 then
-            local attachment0 = Instance.new("Attachment", prevPart)
-            attachment0.Position = Vector3.new(0, -1, 0)
-            local attachment1 = Instance.new("Attachment", part)
-            attachment1.Position = Vector3.new(0, 1, 0)
-            local alignPosition = Instance.new("AlignPosition", part)
-            alignPosition.Attachment0 = attachment0
-            alignPosition.Attachment1 = attachment1
-            alignPosition.RigidityEnabled = true
-            prevPart = part
+    -- Aligning each part in a chain
+    for i = 1, #bodyParts - 1 do
+        alignParts(bodyParts[i], bodyParts[i + 1])
+    end
+
+    -- Hiding arms and legs to only show torso and head in the worm-like body
+    for _, partName in ipairs({"Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+        local limb = character:FindFirstChild(partName)
+        if limb then
+            limb.Transparency = 1 -- Hide the limbs
         end
     end
 end

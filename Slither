@@ -1,4 +1,4 @@
--- LocalScript for transforming limbs and enabling slither movement
+-- LocalScript for transforming R15 limbs and enabling slither movement
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -7,7 +7,13 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 
 -- Function to create the snake limbs
 local function createSnakeLimbs()
-    local limbNames = {"Left Arm", "Right Arm", "Left Leg", "Right Leg"}
+    local limbNames = {
+        "LeftUpperArm", "LeftLowerArm", "LeftHand",
+        "RightUpperArm", "RightLowerArm", "RightHand",
+        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+        "RightUpperLeg", "RightLowerLeg", "RightFoot"
+    }
+    
     for _, partName in ipairs(limbNames) do
         local limb = character:FindFirstChild(partName)
         if limb then

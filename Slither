@@ -1,58 +1,79 @@
--- LocalScript in StarterPlayerScripts
+-- Local Script to make the player look like a worm
 
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local rootPart = character:WaitForChild("HumanoidRootPart")
+-- Function to convert the player into a worm
+local function makeWorm(player)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    
+    -- Making all parts of the character grey
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.BrickColor = BrickColor.new("Dark stone grey")
+        end
+    end
 
--- Function to create the snake limbs
-local function createSnakeLimbs()
-    local limbNames = {"LeftArm", "RightArm", "LeftLeg", "RightLeg"}
-    for _, partName in ipairs(limbNames) do
+    -- Removing unnecessary limbs
+    for _, partName in ipairs({"Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
         local limb = character:FindFirstChild(partName)
         if limb then
-            -- Create a new part for the snake limb
-            local snakeLimb = Instance.new("Part")
-            snakeLimb.Size = Vector3.new(1, 1, 3)
-            snakeLimb.Anchored = false
-            snakeLimb.CanCollide = false
-            snakeLimb.BrickColor = BrickColor.new("Medium stone grey")
-            snakeLimb.Material = Enum.Material.SmoothPlastic
-            snakeLimb.Name = partName .. "_Snake"
-            snakeLimb.Parent = character
-            
-            -- Weld the snake limb to the original limb
-            local weld = Instance.new("Weld")
-            weld.Part0 = limb
-            weld.Part1 = snakeLimb
-            weld.C0 = CFrame.new(0, 0, 0)
-            weld.Parent = limb
+            limb:Destroy()
+        end
+    end
+
+    -- Aligning body parts to form a worm shape
+    local bodyParts = {character.Head, character.UpperTorso, character.LowerTorso}
+    local prevPart = rootPart
+
+    for i, part in ipairs(bodyParts) do
+        if i > 1 then
+            local attachment0 = Instance.new("Attachment", prevPart)
+            attachment0.Position = Vector3.new(0, -1, 0)
+            local attachment1 = Instance.new("Attachment", part)
+            attachment1.Position = Vector3.new(0, 1, 0)
+            local alignPosition = Instance.new("AlignPosition", part)
+            alignPosition.Attachment0 = attachment0
+            alignPosition.Attachment1 = attachment1
+            alignPosition.RigidityEnabled = true
+            prevPart = part
         end
     end
 end
 
--- Function to enable slither movement
-local function enableSlitherMovement()
-    humanoid.WalkSpeed = 10
-    humanoid.JumpPower = 0
+-- Function to enable worm-like movement
+local function enableWormMovement(player)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
 
-    local bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.Parent = rootPart
-    bodyGyro.MaxTorque = Vector3.new(0, math.huge, 0)
+    -- Make the player slither
+    humanoid.WalkSpeed = 16 -- Adjust as necessary
+    humanoid.JumpPower = 0 -- Prevent jumping for worm-like movement
 
-    game:GetService("RunService").RenderStepped:Connect(function()
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + rootPart.CFrame.LookVector)
-        end
-    end)
-
-    humanoid.Running:Connect(function(speed)
-        if speed > 0 then
-            humanoid:Move(Vector3.new(0, 0, 1), true)
+    -- Sine wave for smooth slithering effect
+    local sine = 0
+    game:GetService("RunService").RenderStepped:Connect(function(deltaTime)
+        sine = sine + deltaTime * 5
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.sin(sine) * 0.1, 0)
         end
     end)
 end
 
--- Start the transformation
-createSnakeLimbs()
-enableSlitherMovement()
+-- Main function to run the script
+local function init()
+    local player = game.Players.LocalPlayer
+
+    player.CharacterAdded:Connect(function(character)
+        makeWorm(player)
+        enableWormMovement(player)
+    end)
+
+    if player.Character then
+        makeWorm(player)
+        enableWormMovement(player)
+    end
+end
+
+-- Run the script
+init()

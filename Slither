@@ -1,9 +1,38 @@
--- LocalScript in StarterPlayerScripts
+-- LocalScript for transforming limbs and enabling slither movement
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Function to create the snake limbs
+local function createSnakeLimbs()
+    local limbNames = {"Left Arm", "Right Arm", "Left Leg", "Right Leg"}
+    for _, partName in ipairs(limbNames) do
+        local limb = character:FindFirstChild(partName)
+        if limb then
+            -- Create a new part for the snake limb
+            local snakeLimb = Instance.new("Part")
+            snakeLimb.Size = Vector3.new(1, 1, 3)
+            snakeLimb.Anchored = false
+            snakeLimb.CanCollide = false
+            snakeLimb.BrickColor = BrickColor.new("Medium stone grey")
+            snakeLimb.Material = Enum.Material.SmoothPlastic
+            snakeLimb.Name = partName .. "_Snake"
+            snakeLimb.Parent = character
+            
+            -- Weld the snake limb to the original limb
+            local weld = Instance.new("Weld")
+            weld.Part0 = limb
+            weld.Part1 = snakeLimb
+            weld.C0 = CFrame.new(0, 0, 0)
+            weld.Parent = limb
+
+            -- Make the original limb invisible
+            limb.Transparency = 1
+        end
+    end
+end
 
 -- Function to enable slither movement
 local function enableSlitherMovement()
@@ -27,8 +56,6 @@ local function enableSlitherMovement()
     end)
 end
 
--- Notify the server to create snake limbs
-game.ReplicatedStorage:WaitForChild("CreateSnakeLimbs"):FireServer()
-
 -- Start the transformation
+createSnakeLimbs()
 enableSlitherMovement()

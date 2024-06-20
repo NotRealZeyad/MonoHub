@@ -13,6 +13,7 @@ Or...
 
 Try Out The New Scripts Hub We  Have Been Developing It Will Load Most Active Scripts In The Respository
 loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/RBLX/MainScripts/RBLXHUB' ,true))()
+Key/Password is "KEY_INVISRAY"
 
 ### ⚠ THIS IS THE LATEST RBLX SCRIPTS GITHUB THE OLD ONE IS OUTDATED FROM "NotRealZeyadARCHIVE" AND NO LONGER WORKS, THE ONE YOU ARE ON RIGHT NOW IS THE CORRECT VERSION AND UPDATED
 

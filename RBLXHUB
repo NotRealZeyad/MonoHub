@@ -3,7 +3,7 @@
 
 	-- Window
 	local Window = Rayfield:CreateWindow({
-		Name = "RBLX Repository Hub",
+		Name = "RBLX Repository Hub 🥭 | By NotRealZeyad",
 		LoadingTitle = "RBLX Hub",
 		LoadingSubtitle = "by NotRealZeyad",
 		ConfigurationSaving = {

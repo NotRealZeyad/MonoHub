@@ -5,7 +5,7 @@
 	local Window = Rayfield:CreateWindow({
 		Name = "MonoHub Library 🌟 | By NotRealZeyad",
 		LoadingTitle = "Mono Hub",
-		LoadingSubtitle = "by NotRealZeyad | Version: 1.2.1",
+		LoadingSubtitle = "by NotRealZeyad | Version: 1.2.2",
 		ConfigurationSaving = {
 			Enabled = true,
 			FolderName = nil, -- Create a custom folder for your hub/game
@@ -26,7 +26,7 @@
 print("MonoHub Successfully Loaded!")
 
 -- Tabs
-local ScriptsTab = Window:CreateTab("Scripts", 13307015227)
+local ScriptsTab = Window:CreateTab("Scripts", 133975067822497)
 
 -- ScriptsTab
 local adtb = ScriptsTab:CreateButton({

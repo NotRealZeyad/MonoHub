@@ -101,6 +101,6 @@ local tkg = ScriptsTab:CreateButton({
 local ftig = ScriptsTab:CreateButton({
    Name = "Slither | MIGHT BE BROKEN",
    Callback = function()
-   loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/FakeIPGrabber' ,true))()
+   loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/refs/heads/main/Slither' ,true))()
    end,
 })

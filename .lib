@@ -36,6 +36,13 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/
    end,
 })
 
+local ucc = ScriptsTab:CreateButton({
+   Name = "User Creation | Chat Bypass | Key: fuckswag",
+   Callback = function()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/ucchatbypass' ,true))()
+   end,
+})
+
 local DX = ScriptsTab:CreateButton({
    Name = "Domain X",
    Callback = function()

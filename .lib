@@ -3,9 +3,10 @@
 
 	-- Window
 	local Window = Rayfield:CreateWindow({
-		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.2.3",
+		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.3.0",
 		LoadingTitle = "Mono Hub",
-		LoadingSubtitle = "by NotRealZeyad | Version: 1.2.3",
+		LoadingSubtitle = "by NotRealZeyad | Version: 1.3.0",
+                Theme = "Amethyst"
 		ConfigurationSaving = {
 			Enabled = true,
 			FolderName = nil, -- Create a custom folder for your hub/game
@@ -29,6 +30,13 @@ print("MonoHub Successfully Loaded!")
 local ScriptsTab = Window:CreateTab("Scripts", 133975067822497)
 
 -- ScriptsTab
+local IY = ScriptsTab:CreateButton({
+   Name = "Infinite-Yield",
+   Callback = function()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/InfinteYield' ,true))()
+   end,
+})
+
 local adtb = ScriptsTab:CreateButton({
    Name = "A Dusty Trip",
    Callback = function()

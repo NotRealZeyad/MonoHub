@@ -9,7 +9,7 @@
                 Theme = "Amethyst"
 		ConfigurationSaving = {
 			Enabled = true,
-			FolderName = MHL, -- Create a custom folder for your hub/game
+			FolderName = nil, -- Create a custom folder for your hub/game
 			FileName = "MHLConfig"
 		},
 

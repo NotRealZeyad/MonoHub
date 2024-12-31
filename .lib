@@ -6,7 +6,6 @@
 		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.3.5",
 		LoadingTitle = "Mono Hub",
 		LoadingSubtitle = "by NotRealZeyad | Version: 1.3.5",
-                Theme = "Amethyst",
 		ConfigurationSaving = {
 			Enabled = true,
 			FolderName = nil, -- Create a custom folder for your hub/game

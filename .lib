@@ -3,10 +3,10 @@
 
 	-- Window
 	local Window = Rayfield:CreateWindow({
-		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.3.5",
+		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.3.7",
 		LoadingTitle = "Mono Hub",
-		LoadingSubtitle = "by NotRealZeyad | Version: 1.3.5",
-   Theme = "Amber Glow", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+		LoadingSubtitle = "by NotRealZeyad | Version: 1.3.7",
+   Theme = "AmberGlow",
 
 		ConfigurationSaving = {
 			Enabled = true,
@@ -14,15 +14,15 @@
 			FileName = "MHLConfig"
 		},
 
-		KeySystem = true, -- Set this to true to use our key system
+		KeySystem = true,
 		KeySettings = {
 			Title = "MonoHub Key System",
-			Subtitle = "Don't worry we don't make you visit links like those other hubs",
+			Subtitle = "Don't worry, we don't make you visit profit links unlike some hubs.",
 			Note = "Obtain The Key From github.com/NotRealZeyad/Monohub",
-			FileName = "MHLKEY_SYSTEM", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
-			SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-			GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-			Key = {"KEY_INVISRAY"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, GitHub etc) or simple strings ("hello","key22")
+			FileName = "MHLKEY_SYSTEM",
+			SaveKey = true,
+			GrabKeyFromSite = false,
+			Key = {"KEY_INVISRAY"}
 		}
 	})
 print("MonoHub Successfully Loaded!")
@@ -31,6 +31,20 @@ print("MonoHub Successfully Loaded!")
 local ScriptsTab = Window:CreateTab("Scripts", 133975067822497)
 
 -- ScriptsTab
+local SP = ScriptsTab:CreateButton({
+   Name = "SPHUB-V1.4-SOURCE | MAY NOT WORK",
+   Callback = function()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/sphub-source' ,true))()
+   end,
+})
+
+local SP = ScriptsTab:CreateButton({
+   Name = "SPHUB-Brookhaven",
+   Callback = function()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/sphub' ,true))()
+   end,
+})
+
 local IY = ScriptsTab:CreateButton({
    Name = "Infinite-Yield",
    Callback = function()

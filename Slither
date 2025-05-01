@@ -1,62 +1,59 @@
+-- Final Working Worm Script (Client-Side, Replicates if executor supports)
 
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
+local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
-local humanoid = char:FindFirstChildOfClass("Humanoid")
+local root = char:WaitForChild("HumanoidRootPart")
+local hum = char:FindFirstChildOfClass("Humanoid")
 
--- Hide original body (but keep Humanoid!)
-for _, part in ipairs(char:GetChildren()) do
-	if part:IsA("MeshPart") or part:IsA("Part") then
-		part.Transparency = 1
-		if part.Name ~= "HumanoidRootPart" then
-			part.CanCollide = false
-		end
+-- Hide body and accessories
+for _, obj in ipairs(char:GetDescendants()) do
+	if obj:IsA("BasePart") or obj:IsA("Accessory") then
+		obj.Transparency = 1
+		if obj:IsA("BasePart") then obj.CanCollide = false end
 	end
 end
 
--- Create worm model
-local wormModel = Instance.new("Model")
-wormModel.Name = "WormBody"
-wormModel.Parent = char
+-- Worm body creation
+local wormModel = Instance.new("Model", workspace)
+wormModel.Name = player.Name .. "_Worm"
 
-local segmentCount = 8
-local segmentLength = 2
+local segmentCount = 6
+local segmentDistance = 2
 local segments = {}
 
--- Head segment
+-- Create worm head and weld it to the root so camera follows
 local head = Instance.new("Part")
 head.Size = Vector3.new(2, 2, 2)
 head.Shape = Enum.PartType.Ball
-head.BrickColor = BrickColor.new("Black")
 head.Material = Enum.Material.SmoothPlastic
-head.Position = char.HumanoidRootPart.Position
-head.Anchored = false
-head.CanCollide = true
+head.BrickColor = BrickColor.new("Really black")
 head.Name = "WormHead"
+head.Position = root.Position
+head.Anchored = false
+head.CanCollide = false
 head.Parent = wormModel
 head:SetNetworkOwner(player)
-table.insert(segments, head)
 
--- Attach to HumanoidRootPart
 local weld = Instance.new("WeldConstraint")
 weld.Part0 = head
-weld.Part1 = char.HumanoidRootPart
+weld.Part1 = root
 weld.Parent = head
+
+table.insert(segments, head)
 
 -- Body segments
 for i = 1, segmentCount do
 	local seg = Instance.new("Part")
 	seg.Size = Vector3.new(2, 2, 2)
 	seg.Shape = Enum.PartType.Ball
-	seg.BrickColor = BrickColor.new("Really black")
 	seg.Material = Enum.Material.SmoothPlastic
-	seg.Position = head.Position - Vector3.new(0, 0, segmentLength * i)
-	seg.Anchored = false
-	seg.CanCollide = true
+	seg.BrickColor = BrickColor.new("Really black")
 	seg.Name = "Segment_" .. i
+	seg.Position = head.Position - Vector3.new(0, 0, segmentDistance * i)
+	seg.Anchored = false
+	seg.CanCollide = false
 	seg.Parent = wormModel
+	seg:SetNetworkOwner(player)
 
 	local att0 = Instance.new("Attachment", seg)
 	local att1 = Instance.new("Attachment", segments[#segments])
@@ -66,34 +63,34 @@ for i = 1, segmentCount do
 	constraint.Attachment1 = att1
 	constraint.Parent = seg
 
-	segments[#segments + 1] = seg
+	table.insert(segments, seg)
 end
 
--- Movement
+-- Movement (WASD)
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local moveVec = Vector3.zero
+
 UIS.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.W then
-		moveVec = Vector3.new(0, 0, -1)
-	elseif input.KeyCode == Enum.KeyCode.S then
-		moveVec = Vector3.new(0, 0, 1)
-	elseif input.KeyCode == Enum.KeyCode.A then
-		moveVec = Vector3.new(-1, 0, 0)
-	elseif input.KeyCode == Enum.KeyCode.D then
-		moveVec = Vector3.new(1, 0, 0)
-	end
+	local key = input.KeyCode
+	if key == Enum.KeyCode.W then moveVec = Vector3.new(0, 0, -1)
+	elseif key == Enum.KeyCode.S then moveVec = Vector3.new(0, 0, 1)
+	elseif key == Enum.KeyCode.A then moveVec = Vector3.new(-1, 0, 0)
+	elseif key == Enum.KeyCode.D then moveVec = Vector3.new(1, 0, 0) end
 end)
 
 UIS.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.A or
-	   input.KeyCode == Enum.KeyCode.S or input.KeyCode == Enum.KeyCode.D then
+	local key = input.KeyCode
+	if key == Enum.KeyCode.W or key == Enum.KeyCode.S or key == Enum.KeyCode.A or key == Enum.KeyCode.D then
 		moveVec = Vector3.zero
 	end
 end)
 
+-- Let humanoid handle actual movement
 RunService.RenderStepped:Connect(function()
 	if moveVec.Magnitude > 0 then
-		local dir = char.HumanoidRootPart.CFrame:VectorToWorldSpace(moveVec.Unit)
+		local dir = root.CFrame:VectorToWorldSpace(moveVec.Unit)
 		char:Move(dir, false)
 	end
 end)

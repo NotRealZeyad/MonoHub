@@ -1,104 +1,99 @@
---// Worm Transformation Script
 
-local player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
-char.Archivable = true
-local hum = char:FindFirstChildOfClass("Humanoid")
+local humanoid = char:FindFirstChildOfClass("Humanoid")
 
--- Cleanup original parts
-for _, v in pairs(char:GetChildren()) do
-	if v:IsA("Accessory") or v:IsA("Part") or v:IsA("MeshPart") then
-		v:Destroy()
+-- Hide original body (but keep Humanoid!)
+for _, part in ipairs(char:GetChildren()) do
+	if part:IsA("MeshPart") or part:IsA("Part") then
+		part.Transparency = 1
+		if part.Name ~= "HumanoidRootPart" then
+			part.CanCollide = false
+		end
 	end
 end
 
--- Create the worm model
-local wormModel = Instance.new("Model", workspace)
-wormModel.Name = player.Name .. "_Worm"
+-- Create worm model
+local wormModel = Instance.new("Model")
+wormModel.Name = "WormBody"
+wormModel.Parent = char
 
 local segmentCount = 8
 local segmentLength = 2
 local segments = {}
 
--- Create head
+-- Head segment
 local head = Instance.new("Part")
 head.Size = Vector3.new(2, 2, 2)
 head.Shape = Enum.PartType.Ball
+head.BrickColor = BrickColor.new("Black")
 head.Material = Enum.Material.SmoothPlastic
-head.BrickColor = BrickColor.new("Really black")
-head.Position = char:GetPrimaryPartCFrame().p
+head.Position = char.HumanoidRootPart.Position
 head.Anchored = false
 head.CanCollide = true
 head.Name = "WormHead"
 head.Parent = wormModel
-
-local weldHumanoid = Instance.new("Humanoid", wormModel) -- For name tag
-wormModel.PrimaryPart = head
-
+head:SetNetworkOwner(player)
 table.insert(segments, head)
 
--- Create body segments
+-- Attach to HumanoidRootPart
+local weld = Instance.new("WeldConstraint")
+weld.Part0 = head
+weld.Part1 = char.HumanoidRootPart
+weld.Parent = head
+
+-- Body segments
 for i = 1, segmentCount do
 	local seg = Instance.new("Part")
 	seg.Size = Vector3.new(2, 2, 2)
 	seg.Shape = Enum.PartType.Ball
+	seg.BrickColor = BrickColor.new("Really black")
 	seg.Material = Enum.Material.SmoothPlastic
-	seg.BrickColor = BrickColor.new("Black")
 	seg.Position = head.Position - Vector3.new(0, 0, segmentLength * i)
 	seg.Anchored = false
 	seg.CanCollide = true
 	seg.Name = "Segment_" .. i
 	seg.Parent = wormModel
 
+	local att0 = Instance.new("Attachment", seg)
+	local att1 = Instance.new("Attachment", segments[#segments])
+
 	local constraint = Instance.new("BallSocketConstraint")
-	constraint.Attachment0 = Instance.new("Attachment", seg)
-	constraint.Attachment1 = Instance.new("Attachment", segments[#segments])
+	constraint.Attachment0 = att0
+	constraint.Attachment1 = att1
 	constraint.Parent = seg
 
-	table.insert(segments, seg)
+	segments[#segments + 1] = seg
 end
 
--- Movement handler
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local moveDir = Vector3.zero
-
+-- Movement
+local moveVec = Vector3.zero
 UIS.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 	if input.KeyCode == Enum.KeyCode.W then
-		moveDir = Vector3.new(0, 0, -1)
+		moveVec = Vector3.new(0, 0, -1)
 	elseif input.KeyCode == Enum.KeyCode.S then
-		moveDir = Vector3.new(0, 0, 1)
+		moveVec = Vector3.new(0, 0, 1)
 	elseif input.KeyCode == Enum.KeyCode.A then
-		moveDir = Vector3.new(-1, 0, 0)
+		moveVec = Vector3.new(-1, 0, 0)
 	elseif input.KeyCode == Enum.KeyCode.D then
-		moveDir = Vector3.new(1, 0, 0)
+		moveVec = Vector3.new(1, 0, 0)
 	end
 end)
 
 UIS.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S or
-	   input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then
-		moveDir = Vector3.zero
+	if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.A or
+	   input.KeyCode == Enum.KeyCode.S or input.KeyCode == Enum.KeyCode.D then
+		moveVec = Vector3.zero
 	end
 end)
-
--- Add velocity control
-local bv = Instance.new("BodyVelocity")
-bv.Velocity = Vector3.zero
-bv.MaxForce = Vector3.new(1e5, 0, 1e5)
-bv.P = 10000
-bv.Parent = head
 
 RunService.RenderStepped:Connect(function()
-	if moveDir.Magnitude > 0 then
-		local cf = head.CFrame
-		local dir = cf:VectorToWorldSpace(moveDir).Unit
-		bv.Velocity = dir * 30
-	else
-		bv.Velocity = Vector3.zero
+	if moveVec.Magnitude > 0 then
+		local dir = char.HumanoidRootPart.CFrame:VectorToWorldSpace(moveVec.Unit)
+		char:Move(dir, false)
 	end
 end)
-
--- Finalize character replacement
-char:Destroy()

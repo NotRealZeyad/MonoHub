@@ -28,8 +28,8 @@
 print("MonoHub Successfully Loaded!")
 
 -- Tabs
-local ScriptsTab = Window:CreateTab("Scripts", 131450549591039)
-local TST = Window:CreateTab("devScripts", 131450549591039)
+local ScriptsTab = Window:CreateTab("Scripts", "scroll")
+local TST = Window:CreateTab("devScripts", "scroll")
 
 -- ScriptsTab
 local native = ScriptsTab:CreateButton({

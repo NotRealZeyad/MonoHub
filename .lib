@@ -3,9 +3,9 @@
 
 	-- Window
 	local Window = Rayfield:CreateWindow({
-		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.4.0",
+		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.4.1",
 		LoadingTitle = "Mono Hub",
-		LoadingSubtitle = "by NotRealZeyad | Version: 1.4.0",
+		LoadingSubtitle = "by NotRealZeyad | Version: 1.4.1",
    Theme = "AmberGlow",
 
 		ConfigurationSaving = {

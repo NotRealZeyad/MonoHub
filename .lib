@@ -18,7 +18,7 @@
 		KeySettings = {
 			Title = "MonoHub Key System",
 			Subtitle = "Don't worry, we don't make you visit profit links unlike some hubs.",
-			Note = "Obtain The Key From github.com/NotRealZeyad/Monohub",
+			Note = "Key at github.com/NotRealZeyad/Monohub",
 			FileName = "MHLKEY_SYSTEM",
 			SaveKey = true,
 			GrabKeyFromSite = false,

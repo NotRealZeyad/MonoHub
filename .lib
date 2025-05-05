@@ -3,9 +3,9 @@
 
 	-- Window
 	local Window = Rayfield:CreateWindow({
-		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.3.9",
+		Name = "MonoHub Library 🌟 | By NotRealZeyad | Verison: 1.4.0",
 		LoadingTitle = "Mono Hub",
-		LoadingSubtitle = "by NotRealZeyad | Version: 1.3.8",
+		LoadingSubtitle = "by NotRealZeyad | Version: 1.4.0",
    Theme = "AmberGlow",
 
 		ConfigurationSaving = {
@@ -29,6 +29,7 @@ print("MonoHub Successfully Loaded!")
 
 -- Tabs
 local ScriptsTab = Window:CreateTab("Scripts", 133975067822497)
+local TST = Window:CreateTab("TestingScripts")
 
 -- ScriptsTab
 local SP = ScriptsTab:CreateButton({
@@ -132,5 +133,11 @@ local ftig = ScriptsTab:CreateButton({
    Name = "Slither | MIGHT BE BROKEN",
    Callback = function()
    loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/refs/heads/main/Slither' ,true))()
+   end,
+})
+local tstbrook = TST:CreateButton({
+   Name = "Test Remote Function | Brookhaven",
+   Callback = function()
+   loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/refs/heads/dev/brook' ,true))()
    end,
 })

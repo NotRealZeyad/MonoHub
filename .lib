@@ -28,19 +28,19 @@
 print("MonoHub Successfully Loaded!")
 
 -- Tabs
-local ScriptsTab = Window:CreateTab("Scripts", 133975067822497)
-local TST = Window:CreateTab("TestingScripts")
+local ScriptsTab = Window:CreateTab("Scripts", 131450549591039)
+local TST = Window:CreateTab("devScripts", 131450549591039)
 
 -- ScriptsTab
-local SP = ScriptsTab:CreateButton({
+local native = ScriptsTab:CreateButton({
    Name = "Native Hub",
    Callback = function()
 loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/native' ,true))()
    end,
 })
 
-local SP = ScriptsTab:CreateButton({
-   Name = "SPHUB-V1.4-SOURCE | MAY NOT WORK",
+local SPsource = ScriptsTab:CreateButton({
+   Name = "SPHUB-V1.4-SOURCE",
    Callback = function()
 loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/MonoHub/main/sphub-source' ,true))()
    end,

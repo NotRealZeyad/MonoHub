@@ -1,0 +1,5 @@
+local args = {
+    "PickingCar",
+    "Ferrari"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Ca1r"):FireServer(unpack(args))

@@ -2,146 +2,97 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
 
 -- Configuration
 local ACTIVATION_KEY = Enum.KeyCode.E
-local MOVEMENT_FORCE = 8000 -- How much force is used to move the worm head.
+local MOVEMENT_FORCE = 10000 -- Increased force for better control
+local DAMPING = 0.5 -- How much drag the worm has, prevents overshooting
 
 -- Player Variables
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
-local head = character:WaitForChild("Head")
 
 -- State
 local hasTransformed = false
-local connections = {} -- To manage the physics loop
+local originalNetworkOwner -- To store who controls the parts' physics
 
--- This is the order the body parts will be chained together.
-local WORM_PARTS_ORDER = {
-    "Head",
-    "UpperTorso",
-    "LowerTorso",
-    "HumanoidRootPart",
-    "RightUpperLeg",
-    "RightLowerLeg",
-    "LeftUpperLeg",
-    "LeftLowerLeg",
-    "RightUpperArm",
-    "RightLowerArm",
-    "LeftUpperArm",
-    "LeftLowerArm"
-}
-
--- This function physically connects two parts with a flexible joint
-local function connectParts(partA, partB)
-    -- Destroy any existing connections on the parts
-    for _, joint in pairs(partA:GetJoints()) do
-        if joint.Part1 == partB or joint.Part0 == partB then
-            joint:Destroy()
-        end
-    end
-
-    -- Create Attachments for the constraint
-    local attachmentA = Instance.new("Attachment")
-    attachmentA.Parent = partA
-    attachmentA.Position = Vector3.new(0, -partA.Size.Y / 2, 0)
-
-    local attachmentB = Instance.new("Attachment")
-    attachmentB.Parent = partB
-    attachmentB.Position = Vector3.new(0, partB.Size.Y / 2, 0)
-
-    -- Create the flexible joint
-    local constraint = Instance.new("BallSocketConstraint")
-    constraint.Attachment0 = attachmentA
-    constraint.Attachment1 = attachmentB
-    constraint.Parent = attachmentA
-end
-
--- This function handles the movement of the worm's head
-local function controlWormHead()
-    local moveDirection = Vector3.new(0, 0, 0)
-    
-    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-        moveDirection = moveDirection - Vector3.new(0, 0, 1)
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-        moveDirection = moveDirection + Vector3.new(0, 0, 1)
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-        moveDirection = moveDirection - Vector3.new(1, 0, 0)
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-        moveDirection = moveDirection + Vector3.new(1, 0, 0)
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-        moveDirection = moveDirection + Vector3.new(0, 1, 0)
-    end
-
-    -- Apply force relative to where the camera is looking
-    local cameraDirection = workspace.CurrentCamera.CFrame:VectorToWorldSpace(moveDirection.Unit)
-    head.BodyForce.Force = cameraDirection * MOVEMENT_FORCE
-end
+-- Create a unique collision group for the worm parts
+local WORM_COLLISION_GROUP = "WormBody"
+PhysicsService:CreateCollisionGroup(WORM_COLLISION_GROUP)
+PhysicsService:CollisionGroupSetCollidable(WORM_COLLISION_GROUP, WORM_COLLISION_GROUP, false)
 
 -- This is the main function that performs the transformation
 local function transformIntoWorm()
     if hasTransformed then return end
     hasTransformed = true
-    print("Transforming into a worm...")
+    print("Initiating SAFE worm transformation...")
 
-    -- Disable default character behavior
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    -- STEP 1: Keep the character alive by changing state correctly
     humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-    
-    -- Make the head bigger and easier to see
-    head.Size = Vector3.new(4, 4, 4)
-    
-    -- Create a BodyForce in the head to control movement
-    local bodyForce = Instance.new("BodyForce")
-    bodyForce.Parent = head
-    
-    local bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.P = 5000
-    bodyGyro.Parent = head
+    originalNetworkOwner = character.PrimaryPart.Owner
 
-    -- Collect all parts that will be part of the worm
-    local partsToChain = {}
-    for _, partName in ipairs(WORM_PARTS_ORDER) do
-        local foundPart = character:FindFirstChild(partName)
-        if foundPart then
-            table.insert(partsToChain, foundPart)
-        end
-    end
-
-    -- Break all old joints and make parts non-collidable with each other
+    -- This part is crucial: we take explicit physics control of all body parts
     for _, part in pairs(character:GetChildren()) do
         if part:IsA("BasePart") then
-            for _, joint in pairs(part:GetJoints()) do
-                joint:Destroy()
-            end
-            part.CollisionGroup = "Worm"
+            part:SetNetworkOwner(player)
+            part.CollisionGroup = WORM_COLLISION_GROUP
+        end
+    end
+
+    -- STEP 2: Create a physics overlay instead of destroying joints
+    for _, child in pairs(character:GetChildren()) do
+        -- Find all the original Motor6D joints (neck, shoulders, hips, etc.)
+        if child:IsA("Motor6D") then
+            -- Create a flexible BallSocketConstraint that mirrors the original joint
+            local socket = Instance.new("BallSocketConstraint")
+            socket.Attachment0 = child.Part0.RootAttachment or child.Part0.WaistAttachment or child.Part0.NeckAttachment or child.Part0:FindFirstChildOfClass("Attachment")
+            socket.Attachment1 = child.Part1.RootAttachment or child.Part1.WaistAttachment or child.Part1:FindFirstChildOfClass("Attachment")
+            socket.LimitsEnabled = true
+            socket.TwistLimitsEnabled = true
+            socket.Parent = child.Part0
+
+            -- Disable the original rigid joint so our physics can take over
+            child.Enabled = false
+        end
+    end
+
+    -- STEP 3: Setup head movement controls
+    local head = character:WaitForChild("Head")
+    head.Size = Vector3.new(3, 3, 3) -- Make head a bit bigger
+
+    -- Use an AlignPosition constraint for smoother, more modern physics control
+    local attachmentCam = Instance.new("Attachment", workspace.CurrentCamera.CFramePart)
+    local attachmentHead = Instance.new("Attachment", head)
+    
+    local alignPosition = Instance.new("AlignPosition", head)
+    alignPosition.Attachment0 = attachmentHead
+    alignPosition.Attachment1 = attachmentCam
+    alignPosition.MaxForce = MOVEMENT_FORCE * 2
+    alignPosition.Responsiveness = 10
+
+    local alignOrientation = Instance.new("AlignOrientation", head)
+    alignOrientation.Attachment0 = attachmentHead
+    alignOrientation.Attachment1 = attachmentCam
+    alignOrientation.MaxTorque = MOVEMENT_FORCE
+    alignOrientation.Responsiveness = 20
+
+    -- STEP 4: Add drag to all parts so it doesn't fly out of control
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.LinearVelocity = Vector3.new(0, 5, 0) -- Give it a small pop up
+            local drag = Instance.new("BodyVelocity", part)
+            drag.MaxForce = Vector3.new(0,0,0)
+            drag.Velocity = Vector3.new(0,0,0)
+            
+            RunService.Heartbeat:Connect(function()
+                drag.MaxForce = Vector3.new(1,1,1) * part:GetMass() * DAMPING
+            end)
         end
     end
     
-    -- Create the new chain of joints
-    for i = 1, #partsToChain - 1 do
-        local partA = partsToChain[i]
-        local partB = partsToChain[i + 1]
-        connectParts(partA, partB)
-    end
-    
-    -- Connect the control function to the game loop
-    local controlConnection = RunService.Heartbeat:Connect(controlWormHead)
-    local gyroConnection = RunService.Heartbeat:Connect(function()
-        bodyGyro.CFrame = workspace.CurrentCamera.CFrame
-    end)
-    table.insert(connections, controlConnection)
-    table.insert(connections, gyroConnection)
-    
-    print("Transformation complete. Use WASD and Space to move.")
+    print("Transformation successful. Character is alive and worm-like.")
 end
 
 -- Listen for the key press to start everything
@@ -152,4 +103,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     end
 end)
 
-print("Worm script loaded. Press 'E' to transform.")
+print("SAFE Worm script loaded. Press 'E' to transform.")

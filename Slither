@@ -1,10 +1,9 @@
 --[[ 
-    🪱 Worm Transformation (Client-Safe Final Version)
-    - Works fully as a LocalScript in StarterPlayerScripts
-    - No server-only API calls
-    - No nil or transparency errors
-    - Keeps character alive
-    - Camera-controlled head physics
+    🪱 Worm Mode (Safe Toggle Version)
+    - Press E to toggle on/off
+    - No death or broken joints
+    - Head follows camera smoothly
+    - Keeps humanoid alive and controllable
 ]]
 
 local Players = game:GetService("Players")
@@ -13,83 +12,94 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local ACTIVATION_KEY = Enum.KeyCode.E
-local MOVEMENT_FORCE = 25000
-local MOVEMENT_RESPONSIVENESS = 25
+local MOVEMENT_FORCE = 15000
+local MOVEMENT_RESPONSIVENESS = 20
 
 local player = Players.LocalPlayer
 
-local function waitForCharacter()
+-- Wait for character safely
+local function getCharacter()
 	local char = player.Character or player.CharacterAdded:Wait()
 	char:WaitForChild("Humanoid")
 	char:WaitForChild("Head")
 	return char
 end
 
-local character = waitForCharacter()
+local character = getCharacter()
 local humanoid = character:WaitForChild("Humanoid")
 local head = character:WaitForChild("Head")
 
-local hasTransformed = false
-local created = {}
+local isWorm = false
+local cameraPart, cameraAttach, headAttach, alignPos, alignOri
+local connections = {}
 
-local function make(class, parent)
-	local inst = Instance.new(class)
-	inst.Parent = parent
-	table.insert(created, inst)
-	return inst
+local function cleanup()
+	for _, conn in ipairs(connections) do
+		conn:Disconnect()
+	end
+	connections = {}
+
+	if alignPos then alignPos:Destroy() end
+	if alignOri then alignOri:Destroy() end
+	if cameraAttach then cameraAttach:Destroy() end
+	if headAttach then headAttach:Destroy() end
+	if cameraPart then cameraPart:Destroy() end
 end
 
-local function transformIntoWorm()
-	if hasTransformed then return end
-	hasTransformed = true
-	print("🐛 Transforming into worm...")
+local function toggleWorm()
+	if not isWorm then
+		isWorm = true
+		print("🐛 Entering worm mode...")
 
-	-- Prep humanoid (no full physics state)
-	humanoid.BreakJointsOnDeath = false
-	humanoid.RequiresNeck = false
-	humanoid.PlatformStand = true  -- allows flop but stays alive
+		-- Keep humanoid active (no PlatformStand)
+		humanoid.BreakJointsOnDeath = false
+		humanoid.RequiresNeck = false
 
-	-- Create invisible camera tracker
-	local cam = Workspace.CurrentCamera
-	local cameraPart = make("Part", Workspace)
-	cameraPart.Anchored = true
-	cameraPart.CanCollide = false
-	cameraPart.Transparency = 1
-	cameraPart.Size = Vector3.new(0.1, 0.1, 0.1)
-	cameraPart.Name = "CameraTracker"
+		-- Create invisible part to follow camera
+		local cam = Workspace.CurrentCamera
+		cameraPart = Instance.new("Part")
+		cameraPart.Anchored = true
+		cameraPart.CanCollide = false
+		cameraPart.Transparency = 1
+		cameraPart.Size = Vector3.new(0.1, 0.1, 0.1)
+		cameraPart.Name = "CameraTracker"
+		cameraPart.Parent = Workspace
 
-	RunService.RenderStepped:Connect(function()
-		if cam and cam.CFrame then
+		table.insert(connections, RunService.RenderStepped:Connect(function()
 			cameraPart.CFrame = cam.CFrame
-		end
-	end)
+		end))
 
-	-- Attachments & constraints
-	local camAttach = make("Attachment", cameraPart)
-	local headAttach = make("Attachment", head)
+		cameraAttach = Instance.new("Attachment", cameraPart)
+		headAttach = Instance.new("Attachment", head)
 
-	local alignPos = make("AlignPosition", head)
-	alignPos.Attachment0 = headAttach
-	alignPos.Attachment1 = camAttach
-	alignPos.MaxForce = MOVEMENT_FORCE
-	alignPos.Responsiveness = MOVEMENT_RESPONSIVENESS
-	alignPos.Mode = Enum.PositionAlignmentMode.OneAttachment
+		alignPos = Instance.new("AlignPosition", head)
+		alignPos.Attachment0 = headAttach
+		alignPos.Attachment1 = cameraAttach
+		alignPos.MaxForce = MOVEMENT_FORCE
+		alignPos.Responsiveness = MOVEMENT_RESPONSIVENESS
+		alignPos.Mode = Enum.PositionAlignmentMode.OneAttachment
 
-	local alignOri = make("AlignOrientation", head)
-	alignOri.Attachment0 = headAttach
-	alignOri.Attachment1 = camAttach
-	alignOri.MaxTorque = MOVEMENT_FORCE * 2
-	alignOri.Responsiveness = MOVEMENT_RESPONSIVENESS * 2
-	alignOri.Mode = Enum.OrientationAlignmentMode.OneAttachment
+		alignOri = Instance.new("AlignOrientation", head)
+		alignOri.Attachment0 = headAttach
+		alignOri.Attachment1 = cameraAttach
+		alignOri.MaxTorque = MOVEMENT_FORCE * 2
+		alignOri.Responsiveness = MOVEMENT_RESPONSIVENESS * 2
+		alignOri.Mode = Enum.OrientationAlignmentMode.OneAttachment
 
-	print("✅ Worm mode active! (Head follows camera)")
+		print("✅ Worm mode ON! (Press E again to revert)")
+	else
+		isWorm = false
+		print("🔄 Reverting to normal mode...")
+		cleanup()
+		print("✅ Back to normal.")
+	end
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == ACTIVATION_KEY then
-		transformIntoWorm()
+		toggleWorm()
 	end
 end)
 
-print("🐍 Press 'E' to become a worm!")
+print("🐍 Press 'E' to toggle Worm Mode safely.")

@@ -1,96 +1,155 @@
--- Final Working Worm Script (Client-Side, Replicates if executor supports)
-
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local root = char:WaitForChild("HumanoidRootPart")
-local hum = char:FindFirstChildOfClass("Humanoid")
-
--- Hide body and accessories
-for _, obj in ipairs(char:GetDescendants()) do
-	if obj:IsA("BasePart") or obj:IsA("Accessory") then
-		obj.Transparency = 1
-		if obj:IsA("BasePart") then obj.CanCollide = false end
-	end
-end
-
--- Worm body creation
-local wormModel = Instance.new("Model", workspace)
-wormModel.Name = player.Name .. "_Worm"
-
-local segmentCount = 6
-local segmentDistance = 2
-local segments = {}
-
--- Create worm head and weld it to the root so camera follows
-local head = Instance.new("Part")
-head.Size = Vector3.new(2, 2, 2)
-head.Shape = Enum.PartType.Ball
-head.Material = Enum.Material.SmoothPlastic
-head.BrickColor = BrickColor.new("Really black")
-head.Name = "WormHead"
-head.Position = root.Position
-head.Anchored = false
-head.CanCollide = false
-head.Parent = wormModel
-head:SetNetworkOwner(player)
-
-local weld = Instance.new("WeldConstraint")
-weld.Part0 = head
-weld.Part1 = root
-weld.Parent = head
-
-table.insert(segments, head)
-
--- Body segments
-for i = 1, segmentCount do
-	local seg = Instance.new("Part")
-	seg.Size = Vector3.new(2, 2, 2)
-	seg.Shape = Enum.PartType.Ball
-	seg.Material = Enum.Material.SmoothPlastic
-	seg.BrickColor = BrickColor.new("Really black")
-	seg.Name = "Segment_" .. i
-	seg.Position = head.Position - Vector3.new(0, 0, segmentDistance * i)
-	seg.Anchored = false
-	seg.CanCollide = false
-	seg.Parent = wormModel
-	seg:SetNetworkOwner(player)
-
-	local att0 = Instance.new("Attachment", seg)
-	local att1 = Instance.new("Attachment", segments[#segments])
-
-	local constraint = Instance.new("BallSocketConstraint")
-	constraint.Attachment0 = att0
-	constraint.Attachment1 = att1
-	constraint.Parent = seg
-
-	table.insert(segments, seg)
-end
-
--- Movement (WASD)
-local UIS = game:GetService("UserInputService")
+-- Services
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local moveVec = Vector3.zero
 
-UIS.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	local key = input.KeyCode
-	if key == Enum.KeyCode.W then moveVec = Vector3.new(0, 0, -1)
-	elseif key == Enum.KeyCode.S then moveVec = Vector3.new(0, 0, 1)
-	elseif key == Enum.KeyCode.A then moveVec = Vector3.new(-1, 0, 0)
-	elseif key == Enum.KeyCode.D then moveVec = Vector3.new(1, 0, 0) end
+-- Configuration
+local ACTIVATION_KEY = Enum.KeyCode.E
+local MOVEMENT_FORCE = 8000 -- How much force is used to move the worm head.
+
+-- Player Variables
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local head = character:WaitForChild("Head")
+
+-- State
+local hasTransformed = false
+local connections = {} -- To manage the physics loop
+
+-- This is the order the body parts will be chained together.
+local WORM_PARTS_ORDER = {
+    "Head",
+    "UpperTorso",
+    "LowerTorso",
+    "HumanoidRootPart",
+    "RightUpperLeg",
+    "RightLowerLeg",
+    "LeftUpperLeg",
+    "LeftLowerLeg",
+    "RightUpperArm",
+    "RightLowerArm",
+    "LeftUpperArm",
+    "LeftLowerArm"
+}
+
+-- This function physically connects two parts with a flexible joint
+local function connectParts(partA, partB)
+    -- Destroy any existing connections on the parts
+    for _, joint in pairs(partA:GetJoints()) do
+        if joint.Part1 == partB or joint.Part0 == partB then
+            joint:Destroy()
+        end
+    end
+
+    -- Create Attachments for the constraint
+    local attachmentA = Instance.new("Attachment")
+    attachmentA.Parent = partA
+    attachmentA.Position = Vector3.new(0, -partA.Size.Y / 2, 0)
+
+    local attachmentB = Instance.new("Attachment")
+    attachmentB.Parent = partB
+    attachmentB.Position = Vector3.new(0, partB.Size.Y / 2, 0)
+
+    -- Create the flexible joint
+    local constraint = Instance.new("BallSocketConstraint")
+    constraint.Attachment0 = attachmentA
+    constraint.Attachment1 = attachmentB
+    constraint.Parent = attachmentA
+end
+
+-- This function handles the movement of the worm's head
+local function controlWormHead()
+    local moveDirection = Vector3.new(0, 0, 0)
+    
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+        moveDirection = moveDirection - Vector3.new(0, 0, 1)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+        moveDirection = moveDirection + Vector3.new(0, 0, 1)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+        moveDirection = moveDirection - Vector3.new(1, 0, 0)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+        moveDirection = moveDirection + Vector3.new(1, 0, 0)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+    end
+
+    -- Apply force relative to where the camera is looking
+    local cameraDirection = workspace.CurrentCamera.CFrame:VectorToWorldSpace(moveDirection.Unit)
+    head.BodyForce.Force = cameraDirection * MOVEMENT_FORCE
+end
+
+-- This is the main function that performs the transformation
+local function transformIntoWorm()
+    if hasTransformed then return end
+    hasTransformed = true
+    print("Transforming into a worm...")
+
+    -- Disable default character behavior
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+    
+    -- Make the head bigger and easier to see
+    head.Size = Vector3.new(4, 4, 4)
+    
+    -- Create a BodyForce in the head to control movement
+    local bodyForce = Instance.new("BodyForce")
+    bodyForce.Parent = head
+    
+    local bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.P = 5000
+    bodyGyro.Parent = head
+
+    -- Collect all parts that will be part of the worm
+    local partsToChain = {}
+    for _, partName in ipairs(WORM_PARTS_ORDER) do
+        local foundPart = character:FindFirstChild(partName)
+        if foundPart then
+            table.insert(partsToChain, foundPart)
+        end
+    end
+
+    -- Break all old joints and make parts non-collidable with each other
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            for _, joint in pairs(part:GetJoints()) do
+                joint:Destroy()
+            end
+            part.CollisionGroup = "Worm"
+        end
+    end
+    
+    -- Create the new chain of joints
+    for i = 1, #partsToChain - 1 do
+        local partA = partsToChain[i]
+        local partB = partsToChain[i + 1]
+        connectParts(partA, partB)
+    end
+    
+    -- Connect the control function to the game loop
+    local controlConnection = RunService.Heartbeat:Connect(controlWormHead)
+    local gyroConnection = RunService.Heartbeat:Connect(function()
+        bodyGyro.CFrame = workspace.CurrentCamera.CFrame
+    end)
+    table.insert(connections, controlConnection)
+    table.insert(connections, gyroConnection)
+    
+    print("Transformation complete. Use WASD and Space to move.")
+end
+
+-- Listen for the key press to start everything
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if input.KeyCode == ACTIVATION_KEY then
+        transformIntoWorm()
+    end
 end)
 
-UIS.InputEnded:Connect(function(input)
-	local key = input.KeyCode
-	if key == Enum.KeyCode.W or key == Enum.KeyCode.S or key == Enum.KeyCode.A or key == Enum.KeyCode.D then
-		moveVec = Vector3.zero
-	end
-end)
-
--- Let humanoid handle actual movement
-RunService.RenderStepped:Connect(function()
-	if moveVec.Magnitude > 0 then
-		local dir = root.CFrame:VectorToWorldSpace(moveVec.Unit)
-		char:Move(dir, false)
-	end
-end)
+print("Worm script loaded. Press 'E' to transform.")

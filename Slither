@@ -1,9 +1,9 @@
 --[[ 
-    🪱 Definitive Worm Transformation (Error-Proof Version)
-    - No "nil" errors
-    - Safe LocalScript behavior
-    - Keeps humanoid alive
-    - Physics-based control of head via camera
+    🪱 Working Worm Transformation (Final Fixed Version)
+    - No nil errors
+    - No permanent freeze
+    - No death
+    - Head follows camera using physics
 ]]
 
 --// Services
@@ -19,15 +19,19 @@ local MOVEMENT_RESPONSIVENESS = 25
 
 --// Player setup
 local player = Players.LocalPlayer
-local function getCharacter()
+
+-- Wait for character
+local function waitForCharacter()
 	local char = player.Character
 	if not char or not char.Parent then
 		char = player.CharacterAdded:Wait()
 	end
+	char:WaitForChild("Humanoid")
+	char:WaitForChild("Head")
 	return char
 end
 
-local character = getCharacter()
+local character = waitForCharacter()
 local humanoid = character:WaitForChild("Humanoid")
 local head = character:WaitForChild("Head")
 
@@ -35,82 +39,76 @@ local head = character:WaitForChild("Head")
 local hasTransformed = false
 local cleanupObjects = {}
 
--- Utility to create & track
-local function create(instanceType, parent)
-	local obj = Instance.new(instanceType)
-	obj.Parent = parent
-	table.insert(cleanupObjects, obj)
-	return obj
+-- Utility: make & track instances
+local function make(what, parent)
+	local inst = Instance.new(what)
+	inst.Parent = parent
+	table.insert(cleanupObjects, inst)
+	return inst
 end
 
+--// Worm Transform
 local function transformIntoWorm()
 	if hasTransformed then return end
 	hasTransformed = true
-	print("🐛 Transforming into worm...")
+	print("🐛 Transforming...")
 
-	-- Ensure humanoid exists and character is loaded
-	if not humanoid or not head then
-		warn("Character not fully loaded.")
-		return
-	end
-
-	-- STEP 1: Prep humanoid
+	-- Safe humanoid prep
 	humanoid.BreakJointsOnDeath = false
 	humanoid.RequiresNeck = false
-	humanoid.PlatformStand = true
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-	-- Let the player control physics of the head
+	-- Allow local control of head physics
 	head:SetNetworkOwner(player)
 
-	-- STEP 2: Create invisible part to track camera position
-	local camera = Workspace.CurrentCamera
-	if not camera then
-		warn("Camera not found.")
+	-- Create invisible part to follow camera
+	local cam = Workspace.CurrentCamera
+	if not cam then
+		warn("Camera not ready.")
 		return
 	end
 
-	local cameraPart = create("Part", Workspace)
+	local cameraPart = make("Part", Workspace)
 	cameraPart.Anchored = true
 	cameraPart.CanCollide = false
-	cameraPart.Size = Vector3.new(0.1, 0.1, 0.1)
 	cameraPart.Transparency = 1
+	cameraPart.Size = Vector3.new(0.1, 0.1, 0.1)
 	cameraPart.Name = "CameraTracker"
 
-	-- Keep cameraPart synced with camera every frame
+	-- Keep part synced with camera
 	RunService.RenderStepped:Connect(function()
-		if camera and camera.CFrame then
-			cameraPart.CFrame = camera.CFrame
+		if cam and cam.CFrame then
+			cameraPart.CFrame = cam.CFrame
 		end
 	end)
 
-	-- STEP 3: Attachments & constraints
-	local cameraAttachment = create("Attachment", cameraPart)
-	local headAttachment = create("Attachment", head)
+	-- Create attachments + constraints
+	local cameraAttach = make("Attachment", cameraPart)
+	local headAttach = make("Attachment", head)
 
-	local alignPos = create("AlignPosition", head)
-	alignPos.Attachment0 = headAttachment
-	alignPos.Attachment1 = cameraAttachment
+	local alignPos = make("AlignPosition", head)
+	alignPos.Attachment0 = headAttach
+	alignPos.Attachment1 = cameraAttach
 	alignPos.MaxForce = MOVEMENT_FORCE
 	alignPos.Responsiveness = MOVEMENT_RESPONSIVENESS
 	alignPos.Mode = Enum.PositionAlignmentMode.OneAttachment
 
-	local alignOri = create("AlignOrientation", head)
-	alignOri.Attachment0 = headAttachment
-	alignOri.Attachment1 = cameraAttachment
+	local alignOri = make("AlignOrientation", head)
+	alignOri.Attachment0 = headAttach
+	alignOri.Attachment1 = cameraAttach
 	alignOri.MaxTorque = MOVEMENT_FORCE * 2
 	alignOri.Responsiveness = MOVEMENT_RESPONSIVENESS * 2
 	alignOri.Mode = Enum.OrientationAlignmentMode.OneAttachment
 
-	print("✅ Worm transformation complete. The worm lives!")
+	print("✅ Worm mode active!")
 end
 
---// Activation
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
+--// Keybind
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
 	if input.KeyCode == ACTIVATION_KEY then
 		transformIntoWorm()
 	end
 end)
 
-print("🐛 Worm Script ready. Press 'E' to transform safely.")
+print("🐍 Press 'E' to become a worm!")

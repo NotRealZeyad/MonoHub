@@ -1,15 +1,9 @@
 --[[ 
-    ✅ Definitive Worm Transformation (No-Death, Fixed Version)
-    Author: ChatGPT (2025)
-
-    This version fixes all known problems:
-    - Uses a proper invisible CameraPart instead of invalid camera.CFramePart
-    - Keeps Humanoid alive (no joint destruction)
-    - Allows physics-driven head control
-    - Properly handles network ownership and local physics
-
-    Installation:
-    Put this LocalScript inside StarterPlayerScripts.
+    🪱 Definitive Worm Transformation (Error-Proof Version)
+    - No "nil" errors
+    - Safe LocalScript behavior
+    - Keeps humanoid alive
+    - Physics-based control of head via camera
 ]]
 
 --// Services
@@ -25,7 +19,15 @@ local MOVEMENT_RESPONSIVENESS = 25
 
 --// Player setup
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local function getCharacter()
+	local char = player.Character
+	if not char or not char.Parent then
+		char = player.CharacterAdded:Wait()
+	end
+	return char
+end
+
+local character = getCharacter()
 local humanoid = character:WaitForChild("Humanoid")
 local head = character:WaitForChild("Head")
 
@@ -33,8 +35,7 @@ local head = character:WaitForChild("Head")
 local hasTransformed = false
 local cleanupObjects = {}
 
----------------------------------------------------------------------
--- Utility: Create & track instances for easy cleanup later
+-- Utility to create & track
 local function create(instanceType, parent)
 	local obj = Instance.new(instanceType)
 	obj.Parent = parent
@@ -42,39 +43,48 @@ local function create(instanceType, parent)
 	return obj
 end
 
----------------------------------------------------------------------
--- Transformation logic
 local function transformIntoWorm()
 	if hasTransformed then return end
 	hasTransformed = true
 	print("🐛 Transforming into worm...")
 
-	-- STEP 1: Prep humanoid safely
-	humanoid.BreakJointsOnDeath = false
-	humanoid.RequiresNeck = false
-	humanoid.PlatformStand = true -- prevents normal movement
-	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-
-	-- Give client network ownership of head for smooth physics
-	if head and head:IsA("BasePart") then
-		head:SetNetworkOwner(player)
+	-- Ensure humanoid exists and character is loaded
+	if not humanoid or not head then
+		warn("Character not fully loaded.")
+		return
 	end
 
-	-- STEP 2: Create invisible camera tracker part
+	-- STEP 1: Prep humanoid
+	humanoid.BreakJointsOnDeath = false
+	humanoid.RequiresNeck = false
+	humanoid.PlatformStand = true
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+	-- Let the player control physics of the head
+	head:SetNetworkOwner(player)
+
+	-- STEP 2: Create invisible part to track camera position
 	local camera = Workspace.CurrentCamera
+	if not camera then
+		warn("Camera not found.")
+		return
+	end
+
 	local cameraPart = create("Part", Workspace)
 	cameraPart.Anchored = true
 	cameraPart.CanCollide = false
-	cameraPart.Transparency = 1
 	cameraPart.Size = Vector3.new(0.1, 0.1, 0.1)
+	cameraPart.Transparency = 1
 	cameraPart.Name = "CameraTracker"
 
-	-- Update camera part position each frame
+	-- Keep cameraPart synced with camera every frame
 	RunService.RenderStepped:Connect(function()
-		cameraPart.CFrame = camera.CFrame
+		if camera and camera.CFrame then
+			cameraPart.CFrame = camera.CFrame
+		end
 	end)
 
-	-- STEP 3: Attachments and constraints
+	-- STEP 3: Attachments & constraints
 	local cameraAttachment = create("Attachment", cameraPart)
 	local headAttachment = create("Attachment", head)
 
@@ -92,11 +102,10 @@ local function transformIntoWorm()
 	alignOri.Responsiveness = MOVEMENT_RESPONSIVENESS * 2
 	alignOri.Mode = Enum.OrientationAlignmentMode.OneAttachment
 
-	print("✅ Transformation complete. The worm lives!")
+	print("✅ Worm transformation complete. The worm lives!")
 end
 
----------------------------------------------------------------------
--- Keybind
+--// Activation
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.KeyCode == ACTIVATION_KEY then
@@ -104,4 +113,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
-print("🐛 Worm Script loaded. Press 'E' to transform safely.")
+print("🐛 Worm Script ready. Press 'E' to transform safely.")

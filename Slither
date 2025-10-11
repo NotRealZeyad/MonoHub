@@ -2,12 +2,11 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local PhysicsService = game:GetService("PhysicsService")
 
 -- Configuration
 local ACTIVATION_KEY = Enum.KeyCode.E
-local MOVEMENT_FORCE = 10000 -- Increased force for better control
-local DAMPING = 0.5 -- How much drag the worm has, prevents overshooting
+local MOVEMENT_FORCE = 25000 -- The force used to move the head
+local MOVEMENT_RESPONSIVENESS = 25 -- How quickly the head reacts
 
 -- Player Variables
 local player = Players.LocalPlayer
@@ -16,91 +15,70 @@ local humanoid = character:WaitForChild("Humanoid")
 
 -- State
 local hasTransformed = false
-local originalNetworkOwner -- To store who controls the parts' physics
-
--- Create a unique collision group for the worm parts
-local WORM_COLLISION_GROUP = "WormBody"
-PhysicsService:CreateCollisionGroup(WORM_COLLISION_GROUP)
-PhysicsService:CollisionGroupSetCollidable(WORM_COLLISION_GROUP, WORM_COLLISION_GROUP, false)
+local attachments = {} -- Keep track of created objects to clean up later
 
 -- This is the main function that performs the transformation
 local function transformIntoWorm()
     if hasTransformed then return end
     hasTransformed = true
-    print("Initiating SAFE worm transformation...")
+    print("Initiating DEFINITIVE worm transformation...")
 
-    -- STEP 1: Keep the character alive by changing state correctly
-    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-    originalNetworkOwner = character.PrimaryPart.Owner
+    -- STEP 1: PREPARE THE HUMANOID FOR RAGDOLL
+    -- These properties tell the server that we are intentionally going limp.
+    humanoid.BreakJointsOnDeath = false
+    humanoid.RequiresNeck = false
+    
+    -- STEP 2: ACTIVATE THE OFFICIAL RAGDOLL STATE
+    -- This is the key to the entire script. It makes the character floppy
+    -- in a way the server understands and accepts, PREVENTING DEATH.
+    humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
 
-    -- This part is crucial: we take explicit physics control of all body parts
-    for _, part in pairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            part:SetNetworkOwner(player)
-            part.CollisionGroup = WORM_COLLISION_GROUP
-        end
-    end
+    -- Give it a moment for the state change to register fully
+    wait(0.1)
 
-    -- STEP 2: Create a physics overlay instead of destroying joints
-    for _, child in pairs(character:GetChildren()) do
-        -- Find all the original Motor6D joints (neck, shoulders, hips, etc.)
-        if child:IsA("Motor6D") then
-            -- Create a flexible BallSocketConstraint that mirrors the original joint
-            local socket = Instance.new("BallSocketConstraint")
-            socket.Attachment0 = child.Part0.RootAttachment or child.Part0.WaistAttachment or child.Part0.NeckAttachment or child.Part0:FindFirstChildOfClass("Attachment")
-            socket.Attachment1 = child.Part1.RootAttachment or child.Part1.WaistAttachment or child.Part1:FindFirstChildOfClass("Attachment")
-            socket.LimitsEnabled = true
-            socket.TwistLimitsEnabled = true
-            socket.Parent = child.Part0
-
-            -- Disable the original rigid joint so our physics can take over
-            child.Enabled = false
-        end
-    end
-
-    -- STEP 3: Setup head movement controls
+    -- STEP 3: SET UP HEAD CONTROLS
+    -- Now that the body is limp, we will control the head and drag it around.
     local head = character:WaitForChild("Head")
-    head.Size = Vector3.new(3, 3, 3) -- Make head a bit bigger
+    head.Size = Vector3.new(3, 3, 3) -- Make head easier to see
 
-    -- Use an AlignPosition constraint for smoother, more modern physics control
-    local attachmentCam = Instance.new("Attachment", workspace.CurrentCamera.CFramePart)
-    local attachmentHead = Instance.new("Attachment", head)
+    -- Use modern AlignPosition/Orientation for smooth, physics-based control
+    local camera = workspace.CurrentCamera
     
+    -- Create an attachment point on the camera to follow
+    local cameraAttachment = Instance.new("Attachment", camera.CFramePart)
+    table.insert(attachments, cameraAttachment)
+    
+    -- Create an attachment point on our head
+    local headAttachment = Instance.new("Attachment", head)
+    table.insert(attachments, headAttachment)
+
+    -- This constraint forces the head to the camera's position
     local alignPosition = Instance.new("AlignPosition", head)
-    alignPosition.Attachment0 = attachmentHead
-    alignPosition.Attachment1 = attachmentCam
-    alignPosition.MaxForce = MOVEMENT_FORCE * 2
-    alignPosition.Responsiveness = 10
+    alignPosition.Attachment0 = headAttachment
+    alignPosition.Attachment1 = cameraAttachment
+    alignPosition.MaxForce = MOVEMENT_FORCE
+    alignPosition.Responsiveness = MOVEMENT_RESPONSIVENESS
+    table.insert(attachments, alignPosition)
 
+    -- This constraint forces the head to match the camera's orientation
     local alignOrientation = Instance.new("AlignOrientation", head)
-    alignOrientation.Attachment0 = attachmentHead
-    alignOrientation.Attachment1 = attachmentCam
-    alignOrientation.MaxTorque = MOVEMENT_FORCE
-    alignOrientation.Responsiveness = 20
+    alignOrientation.Attachment0 = headAttachment
+    alignOrientation.Attachment1 = cameraAttachment
+    alignOrientation.MaxTorque = MOVEMENT_FORCE * 2
+    alignOrientation.Responsiveness = MOVEMENT_RESPONSIVENESS * 2
+    table.insert(attachments, alignOrientation)
 
-    -- STEP 4: Add drag to all parts so it doesn't fly out of control
-    for _, part in pairs(character:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.LinearVelocity = Vector3.new(0, 5, 0) -- Give it a small pop up
-            local drag = Instance.new("BodyVelocity", part)
-            drag.MaxForce = Vector3.new(0,0,0)
-            drag.Velocity = Vector3.new(0,0,0)
-            
-            RunService.Heartbeat:Connect(function()
-                drag.MaxForce = Vector3.new(1,1,1) * part:GetMass() * DAMPING
-            end)
-        end
-    end
-    
-    print("Transformation successful. Character is alive and worm-like.")
+    print("Transformation successful. The worm is alive!")
 end
 
 -- Listen for the key press to start everything
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    -- Ignore if typing in chat
     if gameProcessedEvent then return end
+    
     if input.KeyCode == ACTIVATION_KEY then
         transformIntoWorm()
     end
 end)
 
-print("SAFE Worm script loaded. Press 'E' to transform.")
+print("Definitive Worm Script loaded. Press 'E' to transform safely.")

@@ -1,6 +1,6 @@
 # MONO Scripts Hub V1.2.3
 
-Hey, welcome to my Roblox scripts for hacks. To load one of the scripts, use the template below.
+Hey, welcome to my Roblox scripts repo. To load one of the scripts, use the template below.
 
 **loadstring(game:HttpGet('https://raw.githubusercontent.com/NotRealZeyad/monohub/main/(Put the Script you want here from the files wihout brackets and spaces)' ,true))()**
 
